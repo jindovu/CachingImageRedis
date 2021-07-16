@@ -1,0 +1,169 @@
+﻿* Download and build:
+
+	sudo apt-get update
+	sudo apt-get install make
+	sudo apt-get install gcc
+
+	sudo apt-get update 
+	sudo apt-get install build-essential tcl
+	sudo apt-get install libjemalloc-dev  (Optional)
+
+	curl -O http://download.redis.io/redis-stable.tar.gz
+	tar xzvf redis-stable.tar.gz
+	cd redis-stable
+	make
+	make test
+	sudo make install
+	
+	cd src
+	nano 1000.conf
+	nano 1001.conf
+	nano 1002.conf
+
+(Note: slaveof: read only, master: write only)	
+* Config files *.conf:
+
+	# 1000.conf
+
+	bind 123.30.238.161
+	protected-mode no
+	port 1000
+	daemonize yes
+	pidfile 1000.pid
+	loglevel notice
+	logfile 1000.log
+	databases 15
+	daemonize yes
+	
+	# 1001.conf
+
+	bind 123.30.238.161	
+	protected-mode no
+	port 1001
+	daemonize yes
+	pidfile 1001.pid
+	loglevel notice
+	logfile 1001.log
+	databases 15
+	daemonize yes
+	slaveof 123.30.238.161 1000	
+	
+	# 1002.conf
+
+	bind 123.30.238.161	
+	protected-mode no
+	port 1002
+	daemonize yes
+	pidfile 1002.pid
+	loglevel notice
+	logfile 1002.log
+	databases 15
+	daemonize yes
+	slaveof 123.30.238.161 1000
+	
+* Setting Firewall:
+
+	sudo ufw allow 1000
+	sudo ufw allow 1001
+	sudo ufw allow 1002	
+	
+	sudo ufw allow 5000
+	sudo ufw allow 26379
+	
+* Start Redis-server:
+	
+	./redis-server 1000.conf
+	./redis-server 1001.conf
+	./redis-server 1002.conf
+	
+* Check status:
+
+	127.0.0.1:6379> info replication
+
+================================================================================================
+* Setup as service:
+
+	./redis-server --bind 123.30.238.161 --port 2000 --dbfilename 2000.rdb --logfile 2000.log --protected-mode no --daemonize yes
+
+	$ vim /etc/systemd/system/1000.service
+	$ vim /etc/systemd/system/1001.service
+	$ vim /etc/systemd/system/1002.service
+
+------------------------------------------------------------------------------------------------
+[Unit]
+Description="Redis 1000"
+
+[Service]
+ExecStart=/home/ftpuser/redis-stable/src/redis-server --bind 123.30.238.161 --port 1000 --dbfilename 1000.rdb --logfile 1000.log --protected-mode no
+WorkingDirectory=/home/ftpuser/redis-stable/src
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=Redis-1000
+
+[Install]
+WantedBy=multi-user.target
+------------------------------------------------------------------------------------------------
+[Unit]
+Description="redis 1001"
+
+[Service]
+ExecStart=/home/ftpuser/redis-stable/src/redis-server --bind 123.30.238.161 --port 1001 --slaveof 123.30.238.161 1000 --dbfilename 1001.rdb --logfile 1001.log --protected-mode no
+WorkingDirectory=/home/ftpuser/redis-stable/src
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=redis-1001
+
+[Install]
+WantedBy=multi-user.target
+------------------------------------------------------------------------------------------------
+[Unit]
+Description="redis 1002"
+
+[Service]
+ExecStart=/home/ftpuser/redis-stable/src/redis-server --bind 123.30.238.161 --port 1002 --slaveof 123.30.238.161 1000 --dbfilename 1002.rdb --logfile 1002.log --protected-mode no
+WorkingDirectory=/home/ftpuser/redis-stable/src
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=redis-1002
+
+[Install]
+WantedBy=multi-user.target
+------------------------------------------------------------------------------------------------
+
+systemctl daemon-reload
+sudo lsof -i -P -n | grep LISTEN
+
+$ systemctl enable 1000.service
+$ systemctl start 1000.service
+$ systemctl stop 1000.service
+$ systemctl restart 1000.service
+$ systemctl disable 1000.service
+$ systemctl status 1000.service
+
+$ systemctl enable 1001.service
+$ systemctl start 1001.service
+
+$ systemctl enable 1002.service
+$ systemctl start 1002.service
+
+
+
+echo 'vm.overcommit_memory = 1' >> /etc/sysctl.conf
+
+nano /etc/sysctl.conf
+sudo sysctl -p /etc/sysctl.conf 
+lsb_release -d
+sudo lsof -i -P -n | grep LISTEN
+netstat -tanp
+lsof -i | grep ftp
+killall -i redis-ser
+kill PID
+
+pwdx
+$ pwdx <PID>
